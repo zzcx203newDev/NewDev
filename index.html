@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Catat Keuangan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; margin: 0; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        h2 { margin-top: 0; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        .btn-group { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-in { background: #28a745; }
+        .btn-out { background: #dc3545; }
+        .saldo-box { text-align: center; margin: 20px 0; padding: 15px; background: #e9ecef; border-radius: 8px; }
+        .saldo-title { font-size: 14px; color: #6c757d; }
+        .saldo-val { font-size: 24px; font-weight: bold; color: #333; margin-top: 5px; }
+        ul { list-style: none; padding: 0; margin-top: 20px; }
+        li { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .item-info { display: flex; flex-direction: column; }
+        .item-desc { font-weight: bold; font-size: 16px; }
+        .item-date { font-size: 12px; color: #6c757d; margin-top: 4px; }
+        .item-amount { font-weight: bold; font-size: 16px; }
+        .text-in { color: #28a745; }
+        .text-out { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>KeuanganKu</h2>
+        
+        <div class="saldo-box">
+            <div class="saldo-title">Total Saldo Saat Ini</div>
+            <div class="saldo-val" id="total">Rp 0</div>
+        </div>
+
+        <input type="number" id="amount" placeholder="Nominal (contoh: 50000)">
+        <input type="text" id="desc" placeholder="Keterangan (contoh: Makan siang)">
+        <input type="datetime-local" id="customDate">
+
+        <div class="btn-group">
+            <button class="btn-in" onclick="addTransaction(1)">+ Pemasukan</button>
+            <button class="btn-out" onclick="addTransaction(-1)">- Pengeluaran</button>
+        </div>
+
+        <h3>Riwayat Transaksi</h3>
+        <ul id="history"></ul>
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('my_money_data')) || [];
+
+        function resetDateTime() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('customDate').value = now.toISOString().slice(0, 16);
+        }
+        resetDateTime();
+
+        function render() {
+            const list = document.getElementById('history');
+            list.innerHTML = '';
+            let total = 0;
+
+            transactions.forEach((item) => {
+                total += (item.amount * item.type);
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="item-info">
+                        <span class="item-desc">${item.desc}</span>
+                        <span class="item-date">${item.dateString}</span>
+                    </div>
+                    <span class="item-amount ${item.type > 0 ? 'text-in' : 'text-out'}">
+                        ${item.type > 0 ? '+' : '-'} Rp ${item.amount.toLocaleString('id-ID')}
+                    </span>
+                `;
+                list.appendChild(li);
+            });
+
+            document.getElementById('total').innerText = 'Rp ' + total.toLocaleString('id-ID');
+            localStorage.setItem('my_money_data', JSON.stringify(transactions));
+        }
+
+        function addTransaction(type) {
+            const amountInput = document.getElementById('amount');
+            const descInput = document.getElementById('desc');
+            const dateInput = document.getElementById('customDate');
+
+            const amount = parseInt(amountInput.value);
+            const desc = descInput.value.trim() || (type > 0 ? 'Pemasukan' : 'Pengeluaran');
+            const dateVal = dateInput.value ? new Date(dateInput.value) : new Date();
+
+            if (!amount || amount <= 0) {
+                alert('Masukkan nominal yang valid');
+                return;
+            }
+
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            const dateString = dateVal.toLocaleDateString('id-ID', options);
+
+            transactions.unshift({
+                amount: amount,
+                desc: desc,
+                type: type,
+                dateString: dateString,
+                timestamp: dateVal.getTime()
+            });
+
+            render();
+
+            amountInput.value = '';
+            descInput.value = '';
+            resetDateTime();
+        }
+
+        render();
+    </script>
+</body>
+</html>
